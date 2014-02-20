@@ -1,9 +1,8 @@
 application: wechatlove
-version: 1
-runtime: python
-api_version: 1
-threadsafe: flase
-
+version: 2
+runtime: go
+api_version: go1
+ 
 handlers:
 - url: /.*
-  script: wechat.py
+  script: _go_app

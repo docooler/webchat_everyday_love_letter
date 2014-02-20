@@ -1,0 +1,10 @@
+1.build dev enviroment.
+https://developers.google.com/appengine/docs/go/gettingstarted
+
+2.simulator run at pc
+goapp server myapp
+
+3.upload code to gae. goapp help to get doc
+goapp deploy myapp
+
+
