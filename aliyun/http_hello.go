@@ -60,20 +60,20 @@ func Signature(timestamp, nonce string) string {
 func getReqHeader(str string, r * http.Request) string{
   r.ParseForm()
   for k, v := range r.Form {
-          if str == k {
-            return strings.Join(v, "")
-          }
+    if str == k {
+       return strings.Join(v, "")
+    }
   }
   return " "
 }
 func  checkSignature(w http.ResponseWriter, r * http.Request) ( string,  error) {
-    signature := getReqHeader("signature", r)
+    signature := r.FormValue("signature")
   
-    timestamp := getReqHeader("timestamp", r)
+    timestamp := r.FormValue("timestamp")
    
-    nonce     := getReqHeader("nonce", r)
+    nonce     := r.FormValue("nonce")
    
-    echostr   := getReqHeader("echostr", r)
+    echostr   := r.FormValue("echostr")
     if Signature(timestamp, nonce) == signature {
         return echostr, nil
     }
@@ -104,6 +104,7 @@ func handlerPost(w http.ResponseWriter, r * http.Request) {
     log.Println("entry handlerPost")
     if echostr, err := checkSignature(w, r); err != nil{
         io.WriteString(w,echostr)
+        log.Println("handlerPost error signature")
         return
     }
     r.ParseForm()
@@ -123,6 +124,10 @@ func weixinhandler( w http.ResponseWriter, r * http.Request) {
     // log.Println("path", r.URL.Path)
     // log.Println("scheme", r.URL.Scheme)
     // log.Println(r.Form["url_long"])
+    log.Println("signature is ", r.FormValue("signature"))
+    log.Println("nonce is ", r.FormValue("nonce"))
+    log.Println("echostr is ", r.FormValue("echostr"))
+    log.Println("timestamp is  ", r.FormValue("timestamp"))
     // for k, v := range r.Form {
     //     log.Println("key:", k)
     //     log.Println("val:", strings.Join(v, ""))
@@ -141,5 +146,5 @@ func main() {
    if err != nil {
       log.Fatal("God like")
    }
-   log.Println("run server at 8080")
+   log.Println("run server at 80")
 }
