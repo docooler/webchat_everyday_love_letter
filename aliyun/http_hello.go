@@ -10,7 +10,6 @@ import (
          "sort"
          "encoding/xml"
          "time"
-         "strings"
          "errors"
          )
 
@@ -26,22 +25,27 @@ const (
 )
 
 type msgBase struct {
-ToUserName string
-FromUserName string
-CreateTime time.Duration
-MsgType string
-Content string
+    ToUserName string
+    FromUserName string
+    CreateTime time.Duration
+    MsgType string
+    Content string
 }
 
 
 type Request struct {
-XMLName xml.Name `xml:"xml"`
-msgBase // base struct
-Location_X, Location_Y float32
-Scale int
-Label string
-PicUrl string
-MsgId int
+    XMLName xml.Name `xml:"xml"`
+    msgBase // base struct
+    Location_X, Location_Y float32
+    Scale int
+    Label string
+    PicUrl string
+    MsgId int
+}
+
+type Response struct {
+    XMLName xml.Name `xml:"xml"`
+    msgBase
 }
 
 
@@ -57,16 +61,16 @@ func Signature(timestamp, nonce string) string {
    return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-func getReqHeader(str string, r * http.Request) string{
-  r.ParseForm()
-  for k, v := range r.Form {
-    if str == k {
-       return strings.Join(v, "")
-    }
-  }
-  return " "
-}
-func  checkSignature(w http.ResponseWriter, r * http.Request) ( string,  error) {
+// func getReqHeader(str string, r * http.Request) string{
+//   r.ParseForm()
+//   for k, v := range r.Form {
+//     if str == k {
+//        return strings.Join(v, "")
+//     }
+//   }
+//   return " "
+// }
+func checkSignature(w http.ResponseWriter, r * http.Request) ( string,  error) {
     signature := r.FormValue("signature")
   
     timestamp := r.FormValue("timestamp")
@@ -87,8 +91,20 @@ func handShakeGet(w http.ResponseWriter, r * http.Request) {
       io.WriteString(w, echostr)
       
    }else{
-      io.WriteString(w, echostr)
+      io.WriteString(w, "500")
    }
+}
+
+func NewResponse() (resp *Response) {
+    resp = &Response{}
+    resp.CreateTime = time.Duration(time.Now().Unix())
+    return
+}
+
+func (resp Response) Encode() (data []byte, err error) {
+    resp.CreateTime = time.Second
+    data, err = xml.Marshal(resp)
+    return
 }
 
 func DecodeRequest(data []byte) (req *Request, err error) {
@@ -97,13 +113,28 @@ func DecodeRequest(data []byte) (req *Request, err error) {
       return
    }
    req.CreateTime *= time.Second
-   return
+   return 
 }
 
+func handlerUserReq(wreq * Request)(resp *Response, err error){
+    log.Println("enter handlerUserReq")
+    resp = NewResponse()
+    resp.ToUserName = wreq.FromUserName
+    resp.FromUserName = wreq.ToUserName
+    resp.MsgType = Text
+    log.Println("request msg type is ", wreq.MsgType)
+    log.Println("request content is ", wreq.Content)
+    if wreq.MsgType == Text {
+        resp.Content = "愿得一心人，白首不相离。 每天一段情话送给你的爱人！ 天下有情人终成眷属.自动回复功能测试中."
+    }
+    err = nil
+    return 
+}
 func handlerPost(w http.ResponseWriter, r * http.Request) {
+
     log.Println("entry handlerPost")
-    if echostr, err := checkSignature(w, r); err != nil{
-        io.WriteString(w,echostr)
+    if _, err := checkSignature(w, r); err != nil{
+        io.WriteString(w, "500")
         log.Println("handlerPost error signature")
         return
     }
@@ -114,6 +145,26 @@ func handlerPost(w http.ResponseWriter, r * http.Request) {
     }
     log.Println(string(body))
 
+    wechatrep, err := DecodeRequest([]byte(body))
+    if err != nil {
+        log.Println("DecodeRequest error")
+        io.WriteString(w, "500")
+        return
+    }
+    wresp, err := handlerUserReq(wechatrep)
+    if err != nil{
+        log.Println("handlerUserReq error")
+        io.WriteString(w, "500")
+        return
+    }
+    
+    data, err := wresp.Encode()
+    if  err != nil{
+        log.Println("Encode error")
+        io.WriteString(w, "500")
+        return
+    }
+    io.WriteString(w, string(data))
 }
 func weixinhandler( w http.ResponseWriter, r * http.Request) {
    // io.WriteString(w, "Hello, world!")
@@ -123,7 +174,6 @@ func weixinhandler( w http.ResponseWriter, r * http.Request) {
     // log.Println(r.Form) //这些信息是输出到服务器端的打印信息
     // log.Println("path", r.URL.Path)
     // log.Println("scheme", r.URL.Scheme)
-    // log.Println(r.Form["url_long"])
     log.Println("signature is ", r.FormValue("signature"))
     log.Println("nonce is ", r.FormValue("nonce"))
     log.Println("echostr is ", r.FormValue("echostr"))
