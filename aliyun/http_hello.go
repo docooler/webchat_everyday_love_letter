@@ -11,6 +11,7 @@ import (
          "encoding/xml"
          "time"
          "strings"
+         "errors"
          )
 
 const (
@@ -65,22 +66,28 @@ func getReqHeader(str string, r * http.Request) string{
   }
   return " "
 }
+func  checkSignature(w http.ResponseWriter, r * http.Request) ( string,  error) {
+    signature := getReqHeader("signature", r)
+  
+    timestamp := getReqHeader("timestamp", r)
+   
+    nonce     := getReqHeader("nonce", r)
+   
+    echostr   := getReqHeader("echostr", r)
+    if Signature(timestamp, nonce) == signature {
+        return echostr, nil
+    }
+    log.Println("signature isn't right")
+    return "error signature", errors.New("error signature")
+}
 func handShakeGet(w http.ResponseWriter, r * http.Request) {
-   signature := getReqHeader("signature", r)
-  
-   timestamp := getReqHeader("timestamp", r)
    
-   nonce     := getReqHeader("nonce", r)
-   
-   echostr   := getReqHeader("echostr", r)
-  
-   if Signature(timestamp, nonce) == signature {
+   if echostr, err := checkSignature(w, r); err == nil {
       log.Println("write echostr to requestor")
       io.WriteString(w, echostr)
       
    }else{
-      log.Println("signature isn't right")
-      io.WriteString(w, " ")
+      io.WriteString(w, echostr)
    }
 }
 
@@ -95,6 +102,10 @@ func DecodeRequest(data []byte) (req *Request, err error) {
 
 func handlerPost(w http.ResponseWriter, r * http.Request) {
     log.Println("entry handlerPost")
+    if echostr, err := checkSignature(w, r); err != nil{
+        io.WriteString(w,echostr)
+        return
+    }
     r.ParseForm()
     body, err := ioutil.ReadAll(r.Body)
     if err != nil {
