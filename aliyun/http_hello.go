@@ -2,6 +2,7 @@ package main
 
 import (
          "io"
+         "io/ioutil"
          "net/http"
          "log"
          "fmt"
@@ -66,16 +67,17 @@ func getReqHeader(str string, r * http.Request) string{
 }
 func handShakeGet(w http.ResponseWriter, r * http.Request) {
    signature := getReqHeader("signature", r)
-   log.Println("signature is ", signature)
+  
    timestamp := getReqHeader("timestamp", r)
-   log.Println("timestamp is ", timestamp)
+   
    nonce     := getReqHeader("nonce", r)
-   log.Println("nonce is ", nonce)
+   
    echostr   := getReqHeader("echostr", r)
-   log.Println("echostr is ", echostr)
+  
    if Signature(timestamp, nonce) == signature {
-      io.WriteString(w, echostr)
       log.Println("write echostr to requestor")
+      io.WriteString(w, echostr)
+      
    }else{
       log.Println("signature isn't right")
       io.WriteString(w, " ")
@@ -93,36 +95,30 @@ func DecodeRequest(data []byte) (req *Request, err error) {
 
 func handlerPost(w http.ResponseWriter, r * http.Request) {
     log.Println("entry handlerPost")
-    r.ParseForm()       //解析url传递的参数，对于POST则解析响应包的主体（request body）
-    //注意:如果没有调用ParseForm方法，下面无法获取表单的数据
-    log.Println(r.Form) //这些信息是输出到服务器端的打印信息
-    log.Println("path", r.URL.Path)
-    log.Println("scheme", r.URL.Scheme)
-    log.Println(r.Form["url_long"])
-    for k, v := range r.Form {
-        log.Println("key:", k)
-        log.Println("val:", strings.Join(v, ""))
+    r.ParseForm()
+    body, err := ioutil.ReadAll(r.Body)
+    if err != nil {
+        return 
     }
+    log.Println(string(body))
 
 }
 func weixinhandler( w http.ResponseWriter, r * http.Request) {
    // io.WriteString(w, "Hello, world!")
-    log.Println("method is :", r.Method)
-    if r.Method == "GET" {
-      r.ParseForm()       //解析url传递的参数，对于POST则解析响应包的主体（request body）
-    //注意:如果没有调用ParseForm方法，下面无法获取表单的数据
-      log.Println(r.Form) //这些信息是输出到服务器端的打印信息
-      log.Println("path", r.URL.Path)
-      log.Println("scheme", r.URL.Scheme)
-      log.Println(r.Form["url_long"])
-      for k, v := range r.Form {
-          log.Println("key:", k)
-          log.Println("val:", strings.Join(v, ""))
-      }
+    // log.Println("method is :", r.Method)
+    // r.ParseForm()       //解析url传递的参数，对于POST则解析响应包的主体（request body）
+    // //注意:如果没有调用ParseForm方法，下面无法获取表单的数据
+    // log.Println(r.Form) //这些信息是输出到服务器端的打印信息
+    // log.Println("path", r.URL.Path)
+    // log.Println("scheme", r.URL.Scheme)
+    // log.Println(r.Form["url_long"])
+    // for k, v := range r.Form {
+    //     log.Println("key:", k)
+    //     log.Println("val:", strings.Join(v, ""))
+    // }
 
-    handShakeGet(w, r)
-
-    // io.WriteString(w, "Hello, world!")
+   if r.Method == "GET" {
+      handShakeGet(w, r)
    }else {
       handlerPost(w, r)
    }
