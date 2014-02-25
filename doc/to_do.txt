@@ -1,0 +1,7 @@
+1.add database .use  redis.
+
+2.administrator support
+
+3.front support
+
+
