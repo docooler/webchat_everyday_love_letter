@@ -1,4 +1,4 @@
-package main 
+package controllers
 
 import (
          "io"
@@ -166,7 +166,7 @@ func handlerPost(w http.ResponseWriter, r * http.Request) {
     }
     io.WriteString(w, string(data))
 }
-func weixinhandler( w http.ResponseWriter, r * http.Request) {
+func Weixinhandler( w http.ResponseWriter, r * http.Request) {
    // io.WriteString(w, "Hello, world!")
     // log.Println("method is :", r.Method)
     // r.ParseForm()       //解析url传递的参数，对于POST则解析响应包的主体（request body）
@@ -188,13 +188,4 @@ func weixinhandler( w http.ResponseWriter, r * http.Request) {
    }else {
       handlerPost(w, r)
    }
-}
-
-func main() {
-   http.HandleFunc("/weixin", weixinhandler)
-   err := http.ListenAndServe(":80", nil)
-   if err != nil {
-      log.Fatal("God like")
-   }
-   log.Println("run server at 80")
 }
