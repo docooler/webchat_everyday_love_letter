@@ -47,9 +47,11 @@ type Response struct {
     XMLName xml.Name `xml:"xml"`
     msgBase
 }
+func TestFunc(){
+  fmt.Println("hello package")
+}
 
-
-func Signature(timestamp, nonce string) string {
+func createSignature(timestamp, nonce string) string {
    strs := sort.StringSlice{TOKEN, timestamp, nonce}
    sort.Strings(strs)
    str := ""
@@ -70,7 +72,7 @@ func Signature(timestamp, nonce string) string {
 //   }
 //   return " "
 // }
-func checkSignature(w http.ResponseWriter, r * http.Request) ( string,  error) {
+func CheckSignature(w http.ResponseWriter, r * http.Request) ( string,  error) {
     signature := r.FormValue("signature")
   
     timestamp := r.FormValue("timestamp")
@@ -78,7 +80,7 @@ func checkSignature(w http.ResponseWriter, r * http.Request) ( string,  error) {
     nonce     := r.FormValue("nonce")
    
     echostr   := r.FormValue("echostr")
-    if Signature(timestamp, nonce) == signature {
+    if createSignature(timestamp, nonce) == signature {
         return echostr, nil
     }
     log.Println("signature isn't right")
@@ -86,7 +88,7 @@ func checkSignature(w http.ResponseWriter, r * http.Request) ( string,  error) {
 }
 func handShakeGet(w http.ResponseWriter, r * http.Request) {
    
-   if echostr, err := checkSignature(w, r); err == nil {
+   if echostr, err := CheckSignature(w, r); err == nil {
       log.Println("write echostr to requestor")
       io.WriteString(w, echostr)
       
@@ -133,7 +135,7 @@ func handlerUserReq(wreq * Request)(resp *Response, err error){
 func handlerPost(w http.ResponseWriter, r * http.Request) {
 
     log.Println("entry handlerPost")
-    if _, err := checkSignature(w, r); err != nil{
+    if _, err := CheckSignature(w, r); err != nil{
         io.WriteString(w, "500")
         log.Println("handlerPost error signature")
         return

@@ -19,4 +19,5 @@ func main() {
 
 func init(){
     http.HandleFunc("/weixin", controllers.Weixinhandler)
+    controllers.TestFunc()
 }
