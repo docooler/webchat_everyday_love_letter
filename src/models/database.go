@@ -2,7 +2,7 @@ package models
 
 import (
     "github.com/astaxie/goredis"
-    "fmt"
+    "strconv" 
     "sync"
 )
 
@@ -31,81 +31,86 @@ type dbClient struct {
 
 func NewWebChatDbClient()(client *dbClient){
     client = &dbClient{}
+    return
 }
 func DBInit() {
-    client = &dbClient{}
-    client.Addr = "127.0.0.1:6379"
-    client.Db   = 13
+    client := &dbClient{}
+    client.grClient.Addr = "127.0.0.1:6379"
+    client.grClient.Db   = 13
     return
 }
 
-func getLetterIndex(c *dbClient, feild string ) (int64, error){
+func getLetterIndex(c *dbClient, feild string ) (int, error){
     mutex.Lock()
     defer mutex.Unlock()
-    return c.goredis.Hincrby(LETTER_INDEX, feild, 1)
+    index , err := c.grClient.Hincrby(LETTER_INDEX, feild, 1)
+    return (int)(index), err
 }
 
 
 func (c *dbClient)AddSubscriber(subscriberKey string) error{
-    ismem, err := c.goredis.Sismember(UNSUBSCRIBE_USER, subscriberKey)
+    ismem, err := c.grClient.Sismember(UNSUBSCRIBE_USER, []byte(subscriberKey))
     if err != nil {
         return err
     }
     if ismem {
-       _, err =  c.goredis.Smove(UNSUBSCRIBE_USER, ALL_USER, subscriberKey )
+       _, err =  c.grClient.Smove(UNSUBSCRIBE_USER, ALL_USER, []byte(subscriberKey))
        return err
     }
 
-    _, err = c.goredis.Sadd(ALL_USER, subscriber)
+    _, err = c.grClient.Sadd(ALL_USER, []byte(subscriberKey))
     return err
 }
 
-func (c *dbClient)DelSubscriber(subscriberKey string) err error{
-    _, err =  c.goredis.Smove(ALL_USER,UNSUBSCRIBE_USER, subscriberKey )
+func (c *dbClient) DelSubscriber(subscriberKey string) (err error){
+    _, err =  c.grClient.Smove(ALL_USER,UNSUBSCRIBE_USER, []byte(subscriberKey))
+    return
 }
 
-func (c *dbClient)AddForwardLetter(letter string) err error{
+func (c *dbClient) AddForwardLetter(letter string) (err error){
     index , err := getLetterIndex(c, FW_LETTER_INDEX)
+    key := strconv.Itoa(index)
     if err != nil {
         return 
     }
-    _, err = c.goredis.Sadd(FW_LETTER, index)
+    _, err = c.grClient.Sadd(FW_LETTER, []byte(key))
     if err != nil {
         return
     }
-    _, err = c.goredis.HSet(FW_LETTER, index, letter)
+    _, err = c.grClient.Hset(FW_LETTER, key, []byte(letter))
     return
 }
 
-func (c *dbClient)DelForwardLetter(index int64) err error {
-    _, err = c.goredis.Smove(FW_LETTER, SEND_FW_LETTER, index)
+func (c *dbClient) DelForwardLetter(index string) (err error) {
+    _, err = c.grClient.Smove(FW_LETTER, SEND_FW_LETTER, []byte(index))
     return
 }
 
-func (c *dbClient)GetForwardLetterNum() ( int,  error)  {
-    return c.goredis.Scard(FW_LETTER)
+func (c *dbClient) GetForwardLetterNum() ( int,  error)  {
+    return c.grClient.Scard(FW_LETTER)
 }
 
-func (c dbClient)AddOriginLetter(letterKey string)err error {
+func (c *dbClient) AddOriginLetter(letter string)(err error) {
     index , err := getLetterIndex(c, ORIGINAL_LETTER_INDEX)
+    key := (strconv.Itoa(index))
     if err != nil {
         return 
     }
-    _, err = c.goredis.Sadd(ORIGINAL_LETTER, index)
+    _, err = c.grClient.Sadd(ORIGINAL_LETTER, []byte(key))
     if err != nil {
         return
     }
-    _, err = c.goredis.HSet(ORIGINAL_LETTER, index, letter)
+    _, err = c.grClient.Hset(ORIGINAL_LETTER, key, []byte(letter))
     return
 }
 
-func (c dbClient)DelOriginLetter(letterKey string) err error {
-    _, err = c.goredis.Smove(ORIGINAL_LETTER, SEND_ORIGINAL_LETTER, index)
+func (c dbClient)DelOriginLetter(index string) (err error) {
+    _, err = c.grClient.Smove(ORIGINAL_LETTER, SEND_ORIGINAL_LETTER, []byte(index))
     return
 }
 
-func (c dbClient)GetOriginLetterNum()(num int, err error) {
-    return c.goredis.Scard(ORIGINAL_LETTER)
+func (c dbClient) GetOriginLetterNum()(num int, err error) {
+    return c.grClient.Scard(ORIGINAL_LETTER)
 }
 
 
